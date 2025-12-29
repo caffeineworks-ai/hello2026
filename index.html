@@ -570,11 +570,12 @@ body {
   <div class="output-section" id="outputSection">
     <span class="output-label">(OUTPUT)</span>
     <div class="output-field" id="outputText">Hello 2026!</div>
+    <button class="submit-btn" id="downloadBtn">JSON</button>
     <button class="submit-btn" id="resetBtn">Reset</button>
   </div>
 
   <div class="footer">
-    © 2025 Caffeineworks Co. LTD.,
+    © 2025 CaffeineWorks Co. Ltd.
   </div>
 </div>
 
@@ -596,6 +597,7 @@ checkMobile();
 // DOM Elements
 const submitBtn = document.getElementById('submitBtn');
 const resetBtn = document.getElementById('resetBtn');
+const downloadBtn = document.getElementById('downloadBtn');
 const logContent = document.getElementById('logContent');
 const outputSection = document.getElementById('outputSection');
 const outputText = document.getElementById('outputText');
@@ -911,6 +913,49 @@ submitBtn.addEventListener('click', runTraining);
 resetBtn.addEventListener('click', () => {
   resetForNextRun();
   submitBtn.disabled = false;
+});
+
+downloadBtn.addEventListener('click', async () => {
+  if (!model) {
+    alert('No trained model available. Please run training first.');
+    return;
+  }
+  
+  // Extract weights
+  const weights = {};
+  const weightNames = ['hidden1', 'latent', 'hidden2', 'output'];
+  
+  for (let i = 0; i < model.layers.length; i++) {
+    const layer = model.layers[i];
+    const layerWeights = layer.getWeights();
+    const name = weightNames[i];
+    
+    weights[name] = {
+      kernel: await layerWeights[0].array(),
+      bias: await layerWeights[1].array()
+    };
+  }
+  
+  // Create JSON
+  const jsonData = {
+    architecture: "9 → 7 → 3 → 7 → 11",
+    activation: "tanh",
+    input_text: document.getElementById('inputText').value,
+    output_text: OUTPUT_TEXT,
+    weights: weights,
+    exported_at: new Date().toISOString()
+  };
+  
+  // Download
+  const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'encoder-decoder-weights.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 });
 
 // Start
