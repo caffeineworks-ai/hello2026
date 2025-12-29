@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Season's Greeting | Encoder-Decoder</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 50%, #0f0f1a 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e0e0e0;
+}
+
+/* Mobile Popup */
+.mobile-popup {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.95);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px;
+  text-align: center;
+}
+
+.mobile-popup.show {
+  display: flex;
+}
+
+.mobile-popup-icon {
+  font-size: 3rem;
+  margin-bottom: 10px;
+}
+
+.mobile-popup h2 {
+  font-size: 1.3rem;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.mobile-popup p {
+  font-size: 0.9rem;
+  color: #888;
+  line-height: 1.6;
+}
+
+.mobile-popup-btn {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #7b2ff7, #ff2daf);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 30px;
+  color: white;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.container {
+  max-width: 900px;
+  width: 100%;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.title h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.6rem;
+  color: #00d4ff;
+  font-weight: 400;
+}
+
+.title p {
+  color: #444;
+  font-size: 0.75rem;
+  margin-top: 8px;
+}
+
+/* Input Section */
+.input-section {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.input-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+}
+
+.input-field {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 12px 20px;
+  color: #00d4ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  width: 180px;
+  text-align: center;
+  cursor: not-allowed;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #7b2ff7, #ff2daf);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 30px;
+  color: white;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 25px rgba(123,47,247,0.5);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Neural Network Grid */
+.nn-container {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid #222;
+  border-radius: 16px;
+  padding: 30px 20px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.nn-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(0,212,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(123,47,247,0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.grid-wrapper {
+  display: flex;
+  align-items: stretch;
+  gap: 15px;
+}
+
+.layer-indicators {
+  display: flex;
+  flex-direction: column;
+  min-width: 60px;
+}
+
+.layer-indicator {
+  font-size: 0.6rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+}
+
+.layer-indicator:not(:last-child) {
+  margin-bottom: 8px;
+}
+
+.layer-indicator.input-indicator {
+  color: #00d4ff;
+}
+
+.layer-indicator.output-indicator {
+  color: #ff2daf;
+}
+
+.grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+}
+
+.grid-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+}
+
+.node {
+  width: 55px;
+  height: 32px;
+  background: rgba(30,30,50,0.8);
+  border: 1px solid #333;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: #666;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.node.empty {
+  background: transparent;
+  border: none;
+  width: 55px;
+}
+
+.node.input-node {
+  border-color: #00d4ff33;
+}
+
+.node.input-node.active {
+  background: rgba(0,212,255,0.2);
+  border-color: #00d4ff;
+  color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0,212,255,0.3);
+}
+
+.node.hidden-node {
+  border-color: #7b2ff733;
+}
+
+.node.hidden-node.active {
+  background: rgba(123,47,247,0.15);
+  border-color: #7b2ff7;
+  color: #a855f7;
+  box-shadow: 0 0 10px rgba(123,47,247,0.2);
+}
+
+.node.latent-node {
+  border-color: #ffd93d33;
+  background: rgba(255,217,61,0.05);
+}
+
+.node.latent-node.active {
+  background: rgba(255,217,61,0.25);
+  border-color: #ffd93d;
+  color: #ffd93d;
+  box-shadow: 0 0 15px rgba(255,217,61,0.4);
+}
+
+.node.output-node {
+  border-color: #ff2daf33;
+}
+
+.node.output-node.active {
+  background: rgba(255,45,175,0.2);
+  border-color: #ff2daf;
+  color: #ff2daf;
+  box-shadow: 0 0 12px rgba(255,45,175,0.3);
+}
+
+/* Computation Log */
+.log-container {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 15px;
+  height: 220px;
+  overflow-y: auto;
+}
+
+.log-title {
+  font-size: 0.7rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-title::before {
+  content: '>';
+  color: #00d4ff;
+}
+
+.log-content {
+  font-size: 0.7rem;
+  line-height: 1.7;
+  color: #666;
+}
+
+.log-content div {
+  margin-bottom: 2px;
+}
+
+.log-content .init {
+  color: #888;
+}
+
+.log-content .tfjs {
+  color: #ff6f00;
+}
+
+.log-content .epoch {
+  color: #00d4ff;
+}
+
+.log-content .forward {
+  color: #a855f7;
+}
+
+.log-content .backward {
+  color: #f97316;
+}
+
+.log-content .loss {
+  color: #ffd93d;
+}
+
+.log-content .complete {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.log-content .output-msg {
+  color: #ff2daf;
+  font-weight: 700;
+}
+
+/* Output Display */
+.output-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 25px;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: all 0.5s ease;
+}
+
+.output-section.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.output-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+}
+
+.output-field {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid #ff2daf;
+  border-radius: 8px;
+  padding: 12px 20px;
+  color: #ff2daf;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(255,45,175,0.3);
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(255,45,175,0.3); }
+  50% { box-shadow: 0 0 30px rgba(255,45,175,0.6); }
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 30px;
+  color: #555;
+  font-size: 0.8rem;
+}
+
+/* Scrollbar */
+.log-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: #111;
+  border-radius: 3px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile Popup -->
+<div class="mobile-popup" id="mobilePopup">
+  <div class="mobile-popup-icon">🖥️</div>
+  <h2>Please View on Desktop</h2>
+  <p>This neural network visualization is optimized for larger screens.<br>Please open this page on a PC or tablet for the best experience.</p>
+  <button class="mobile-popup-btn" onclick="closeMobilePopup()">Got it</button>
+</div>
+
+<div class="container">
+  <div class="title">
+    <h1>Season's Greeting Encoder-Decoder</h1>
+    <p>Neural Network Transformation</p>
+  </div>
+
+  <div class="input-section">
+    <span class="input-label">(INPUT)</span>
+    <input type="text" class="input-field" id="inputText" value="Bye 2025!" readonly>
+    <button class="submit-btn" id="submitBtn" disabled>Submit</button>
+  </div>
+
+  <div class="nn-container">
+    <div class="grid-wrapper">
+      <div class="layer-indicators" id="layerIndicators">
+        <div class="layer-indicator input-indicator">Input</div>
+        <div class="layer-indicator">Hidden1</div>
+        <div class="layer-indicator">Latent</div>
+        <div class="layer-indicator">Hidden2</div>
+        <div class="layer-indicator output-indicator">Output</div>
+      </div>
+      
+      <div class="grid-container" id="gridContainer">
+        <!-- Row 1: Input (9 nodes, centered in 11 columns) -->
+        <div class="grid-row" id="row-input">
+          <div class="node empty"></div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node input-node">0.00</div>
+          <div class="node empty"></div>
+        </div>
+        
+        <!-- Row 2: Hidden1 (7 nodes) -->
+        <div class="grid-row" id="row-hidden1">
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+        </div>
+        
+        <!-- Row 3: Latent (3 nodes) -->
+        <div class="grid-row" id="row-latent">
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+          <div class="node latent-node">0.00</div>
+          <div class="node latent-node">0.00</div>
+          <div class="node latent-node">0.00</div>
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+        </div>
+        
+        <!-- Row 4: Hidden2 (7 nodes) -->
+        <div class="grid-row" id="row-hidden2">
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node hidden-node">0.00</div>
+          <div class="node empty"></div>
+          <div class="node empty"></div>
+        </div>
+        
+        <!-- Row 5: Output (11 nodes) -->
+        <div class="grid-row" id="row-output">
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+          <div class="node output-node">0.00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-container">
+    <div class="log-title">Computation Log</div>
+    <div class="log-content" id="logContent">
+      <div class="init">Initializing...</div>
+    </div>
+  </div>
+
+  <div class="output-section" id="outputSection">
+    <span class="output-label">(OUTPUT)</span>
+    <div class="output-field" id="outputText">Hello 2026!</div>
+    <button class="submit-btn" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="footer">
+    © 2025 CaffeineWorks
+  </div>
+</div>
+
+<script>
+// Mobile detection
+function checkMobile() {
+  if (window.innerWidth <= 768) {
+    document.getElementById('mobilePopup').classList.add('show');
+  }
+}
+
+function closeMobilePopup() {
+  document.getElementById('mobilePopup').classList.remove('show');
+}
+
+window.addEventListener('resize', checkMobile);
+checkMobile();
+
+// DOM Elements
+const submitBtn = document.getElementById('submitBtn');
+const resetBtn = document.getElementById('resetBtn');
+const logContent = document.getElementById('logContent');
+const outputSection = document.getElementById('outputSection');
+const outputText = document.getElementById('outputText');
+
+// Constants
+const INPUT_TEXT = "Bye 2025!";
+const OUTPUT_TEXT = "Hello 2026!";
+const EPOCHS = 50;
+const LEARNING_RATE = 0.1;
+
+// Model
+let model = null;
+let inputTensor = null;
+let targetTensor = null;
+
+// Utility functions
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function textToVector(text, length) {
+  const vec = [];
+  for (let i = 0; i < length; i++) {
+    const char = text[i] || ' ';
+    const ascii = char.charCodeAt(0);
+    vec.push((ascii - 64) / 64);
+  }
+  return vec;
+}
+
+function vectorToText(vec) {
+  return vec.map(v => {
+    const ascii = Math.round(v * 64 + 64);
+    return String.fromCharCode(Math.max(32, Math.min(126, ascii)));
+  }).join('');
+}
+
+function setLayerValues(rowId, values) {
+  const row = document.getElementById(rowId);
+  const nodes = row.querySelectorAll('.node:not(.empty)');
+  nodes.forEach((node, idx) => {
+    if (idx < values.length) {
+      node.textContent = values[idx].toFixed(2);
+    }
+  });
+}
+
+function activateLayer(rowId) {
+  const row = document.getElementById(rowId);
+  const nodes = row.querySelectorAll('.node:not(.empty)');
+  nodes.forEach(node => node.classList.add('active'));
+}
+
+function deactivateLayer(rowId) {
+  const row = document.getElementById(rowId);
+  const nodes = row.querySelectorAll('.node:not(.empty)');
+  nodes.forEach(node => node.classList.remove('active'));
+}
+
+function deactivateAllLayers() {
+  ['row-input', 'row-hidden1', 'row-latent', 'row-hidden2', 'row-output'].forEach(id => {
+    deactivateLayer(id);
+  });
+}
+
+function clearLog() {
+  logContent.innerHTML = '';
+}
+
+function addLog(text, className = '') {
+  const div = document.createElement('div');
+  div.textContent = text;
+  if (className) div.className = className;
+  logContent.appendChild(div);
+  logContent.scrollTop = logContent.scrollHeight;
+}
+
+function initializeGridToZero() {
+  const rows = ['row-input', 'row-hidden1', 'row-latent', 'row-hidden2', 'row-output'];
+  const sizes = [9, 7, 3, 7, 11];
+  
+  rows.forEach((rowId, i) => {
+    const zeros = new Array(sizes[i]).fill(0);
+    setLayerValues(rowId, zeros);
+  });
+}
+
+function resetForNextRun() {
+  deactivateAllLayers();
+  initializeGridToZero();
+  outputSection.classList.remove('show');
+  
+  clearLog();
+  addLog('TensorFlow.js v4.17.0 loaded', 'tfjs');
+  addLog('Backend: ' + tf.getBackend(), 'tfjs');
+  addLog('', '');
+  addLog('Ready to transform...', 'init');
+  addLog('Click Submit to start training', 'init');
+}
+
+// Build model
+function buildModel() {
+  // Dispose previous model if exists
+  if (model) {
+    model.dispose();
+  }
+  
+  const newModel = tf.sequential();
+  
+  newModel.add(tf.layers.dense({
+    units: 7,
+    activation: 'tanh',
+    inputShape: [9],
+    name: 'hidden1'
+  }));
+  
+  newModel.add(tf.layers.dense({
+    units: 3,
+    activation: 'tanh',
+    name: 'latent'
+  }));
+  
+  newModel.add(tf.layers.dense({
+    units: 7,
+    activation: 'tanh',
+    name: 'hidden2'
+  }));
+  
+  newModel.add(tf.layers.dense({
+    units: 11,
+    activation: 'tanh',
+    name: 'output'
+  }));
+  
+  newModel.compile({
+    optimizer: tf.train.sgd(LEARNING_RATE),
+    loss: 'meanSquaredError'
+  });
+  
+  return newModel;
+}
+
+// Get intermediate layer outputs
+async function getLayerOutputs(model, input) {
+  const inputTensor = tf.tensor2d([input]);
+  
+  const h1Model = tf.model({
+    inputs: model.input,
+    outputs: model.getLayer('hidden1').output
+  });
+  
+  const latentModel = tf.model({
+    inputs: model.input,
+    outputs: model.getLayer('latent').output
+  });
+  
+  const h2Model = tf.model({
+    inputs: model.input,
+    outputs: model.getLayer('hidden2').output
+  });
+  
+  const h1 = await h1Model.predict(inputTensor).data();
+  const latent = await latentModel.predict(inputTensor).data();
+  const h2 = await h2Model.predict(inputTensor).data();
+  const output = await model.predict(inputTensor).data();
+  
+  inputTensor.dispose();
+  
+  return {
+    hidden1: Array.from(h1),
+    latent: Array.from(latent),
+    hidden2: Array.from(h2),
+    output: Array.from(output)
+  };
+}
+
+// Main training loop
+async function runTraining() {
+  submitBtn.disabled = true;
+  clearLog();
+  outputSection.classList.remove('show');
+  deactivateAllLayers();
+  
+  // Step 1: Initialize
+  addLog('TensorFlow.js v4.17.0', 'tfjs');
+  addLog('Backend: ' + tf.getBackend(), 'tfjs');
+  addLog('', '');
+  
+  addLog('Initializing all nodes to 0...', 'init');
+  initializeGridToZero();
+  await sleep(500);
+  
+  addLog('Building model: 9 → 7 → 3 → 7 → 11', 'init');
+  model = buildModel();
+  await sleep(300);
+  
+  // Prepare data
+  const inputVec = textToVector(INPUT_TEXT, 9);
+  const targetVec = textToVector(OUTPUT_TEXT, 11);
+  
+  inputTensor = tf.tensor2d([inputVec]);
+  targetTensor = tf.tensor2d([targetVec]);
+  
+  addLog(`Input: "${INPUT_TEXT}" → [${inputVec.map(v => v.toFixed(2)).join(', ')}]`, 'init');
+  setLayerValues('row-input', inputVec);
+  activateLayer('row-input');
+  await sleep(400);
+  
+  addLog(`Target: "${OUTPUT_TEXT}"`, 'init');
+  addLog('', '');
+  addLog('Starting training...', 'epoch');
+  await sleep(300);
+  
+  // Training loop
+  for (let epoch = 1; epoch <= EPOCHS; epoch++) {
+    const history = await model.fit(inputTensor, targetTensor, {
+      epochs: 1,
+      verbose: 0
+    });
+    
+    const loss = history.history.loss[0];
+    const outputs = await getLayerOutputs(model, inputVec);
+    
+    if (epoch <= 5 || epoch % 10 === 0 || epoch === EPOCHS) {
+      addLog(`Epoch ${epoch}/${EPOCHS}`, 'epoch');
+      addLog(`  Forward pass...`, 'forward');
+      addLog(`  Loss: ${loss.toFixed(6)}`, 'loss');
+      
+      if (epoch > 1) {
+        addLog(`  Backward pass: updating weights`, 'backward');
+      }
+      
+      deactivateAllLayers();
+      
+      setLayerValues('row-hidden1', outputs.hidden1);
+      activateLayer('row-hidden1');
+      await sleep(80);
+      
+      setLayerValues('row-latent', outputs.latent);
+      activateLayer('row-latent');
+      await sleep(80);
+      
+      setLayerValues('row-hidden2', outputs.hidden2);
+      activateLayer('row-hidden2');
+      await sleep(80);
+      
+      setLayerValues('row-output', outputs.output);
+      activateLayer('row-output');
+      await sleep(150);
+    } else {
+      setLayerValues('row-hidden1', outputs.hidden1);
+      setLayerValues('row-latent', outputs.latent);
+      setLayerValues('row-hidden2', outputs.hidden2);
+      setLayerValues('row-output', outputs.output);
+      await sleep(30);
+    }
+    
+    if (loss < 0.001) {
+      addLog(`Converged at epoch ${epoch}!`, 'complete');
+      break;
+    }
+  }
+  
+  // Final output
+  addLog('', '');
+  addLog('Training complete!', 'complete');
+  
+  const finalOutputs = await getLayerOutputs(model, inputVec);
+  const decodedText = vectorToText(finalOutputs.output);
+  
+  addLog(`Decoded output: "${decodedText}"`, 'output-msg');
+  
+  // Show result
+  await sleep(500);
+  outputText.textContent = OUTPUT_TEXT;
+  outputSection.classList.add('show');
+  
+  // Cleanup tensors
+  inputTensor.dispose();
+  targetTensor.dispose();
+}
+
+// Initialize
+async function init() {
+  clearLog();
+  addLog('Loading TensorFlow.js...', 'init');
+  
+  try {
+    await tf.ready();
+    
+    addLog('TensorFlow.js v4.17.0 loaded', 'tfjs');
+    addLog('Backend: ' + tf.getBackend(), 'tfjs');
+    addLog('', '');
+    addLog('Model architecture: 9 → 7 → 3 → 7 → 11', 'init');
+    addLog('', '');
+    addLog('Ready to transform...', 'init');
+    addLog('Click Submit to start training', 'init');
+    
+    initializeGridToZero();
+    submitBtn.disabled = false;
+    
+  } catch (error) {
+    addLog('Error loading TensorFlow.js: ' + error.message, 'backward');
+  }
+}
+
+// Event listeners
+submitBtn.addEventListener('click', runTraining);
+
+resetBtn.addEventListener('click', () => {
+  resetForNextRun();
+  submitBtn.disabled = false;
+});
+
+// Start
+init();
+</script>
+
+</body>
+</html>
