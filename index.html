@@ -23,6 +23,10 @@ body {
   padding: 20px;
   font-family: 'JetBrains Mono', monospace;
   color: #e0e0e0;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 /* Mobile Popup */
@@ -127,7 +131,13 @@ body {
   font-size: 1.1rem;
   width: 180px;
   text-align: center;
-  cursor: not-allowed;
+  transition: all 0.3s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #00d4ff;
+  box-shadow: 0 0 15px rgba(0,212,255,0.3);
 }
 
 .submit-btn {
@@ -457,7 +467,7 @@ body {
 
   <div class="input-section">
     <span class="input-label">(INPUT)</span>
-    <input type="text" class="input-field" id="inputText" value="Bye 2025!" readonly>
+    <input type="text" class="input-field" id="inputText" value="Bye 2025!" maxlength="9">
     <button class="submit-btn" id="submitBtn" disabled>Submit</button>
   </div>
 
@@ -564,7 +574,7 @@ body {
   </div>
 
   <div class="footer">
-    © 2025 CaffeineWorks
+    © 2025 Caffeineworks Co. LTD.,
   </div>
 </div>
 
@@ -591,7 +601,6 @@ const outputSection = document.getElementById('outputSection');
 const outputText = document.getElementById('outputText');
 
 // Constants
-const INPUT_TEXT = "Bye 2025!";
 const OUTPUT_TEXT = "Hello 2026!";
 const EPOCHS = 50;
 const LEARNING_RATE = 0.1;
@@ -782,14 +791,18 @@ async function runTraining() {
   model = buildModel();
   await sleep(300);
   
+  // Get user input (pad or trim to 9 chars)
+  let userInput = document.getElementById('inputText').value;
+  userInput = userInput.padEnd(9, ' ').substring(0, 9);
+  
   // Prepare data
-  const inputVec = textToVector(INPUT_TEXT, 9);
+  const inputVec = textToVector(userInput, 9);
   const targetVec = textToVector(OUTPUT_TEXT, 11);
   
   inputTensor = tf.tensor2d([inputVec]);
   targetTensor = tf.tensor2d([targetVec]);
   
-  addLog(`Input: "${INPUT_TEXT}" → [${inputVec.map(v => v.toFixed(2)).join(', ')}]`, 'init');
+  addLog(`Input: "${userInput}" → [${inputVec.map(v => v.toFixed(2)).join(', ')}]`, 'init');
   setLayerValues('row-input', inputVec);
   activateLayer('row-input');
   await sleep(400);
@@ -902,6 +915,16 @@ resetBtn.addEventListener('click', () => {
 
 // Start
 init();
+
+// Disable right-click context menu
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
+
+// Disable text selection
+document.addEventListener('selectstart', (e) => {
+  e.preventDefault();
+});
 </script>
 
 </body>
