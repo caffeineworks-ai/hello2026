@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Season's Greeting | FNN</title>
+<meta property="og:title" content="Season's Greetings FNN">
+<meta property="og:description" content="어떤 송년 인사든 새해 인사로 바꿔주는 신경망">
+<meta property="og:image" content="https://caffeineworks-ai.github.io/hello2026/preview.png">
+<meta property="og:url" content="https://caffeineworks-ai.github.io/hello2026/">
+<meta property="og:type" content="website">
+<title>Season's Greetings | FNN</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -119,6 +124,8 @@ body {
   font-size: 1rem;
   font-weight: 700;
   color: white;
+  width: 80px;
+  text-align: right;
 }
 
 .input-field {
@@ -138,6 +145,16 @@ body {
   outline: none;
   border-color: #00d4ff;
   box-shadow: 0 0 15px rgba(0,212,255,0.3);
+}
+
+.target-field {
+  width: 180px;
+  color: #ff2daf;
+}
+
+.target-field:focus {
+  border-color: #ff2daf;
+  box-shadow: 0 0 15px rgba(255,45,175,0.3);
 }
 
 .submit-btn {
@@ -162,6 +179,11 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+.btn-placeholder {
+  width: 108px;
+  height: 46px;
 }
 
 /* Neural Network Grid */
@@ -461,7 +483,7 @@ body {
 
 <div class="container">
   <div class="title">
-    <h1>Season's Greeting FNN</h1>
+    <h1>Season's Greetings FNN</h1>
     <p>Neural Network Transformation</p>
   </div>
 
@@ -469,6 +491,12 @@ body {
     <span class="input-label">(INPUT)</span>
     <input type="text" class="input-field" id="inputText" value="Bye 2025!" maxlength="9">
     <button class="submit-btn" id="submitBtn" disabled>Submit</button>
+  </div>
+
+  <div class="input-section">
+    <span class="input-label">(TARGET)</span>
+    <input type="text" class="input-field target-field" id="targetText" value="Hello 2026!" maxlength="11">
+    <div class="btn-placeholder"></div>
   </div>
 
   <div class="nn-container">
@@ -575,7 +603,7 @@ body {
   </div>
 
   <div class="footer">
-    © 2025 CaffeineWorks Co. Ltd.
+    © 2025 Caffeineworks Co. Ltd.
   </div>
 </div>
 
@@ -603,7 +631,6 @@ const outputSection = document.getElementById('outputSection');
 const outputText = document.getElementById('outputText');
 
 // Constants
-const OUTPUT_TEXT = "Hello 2026!";
 const EPOCHS = 50;
 const LEARNING_RATE = 0.1;
 
@@ -615,6 +642,25 @@ let targetTensor = null;
 // Utility functions
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function beep(frequency = 800, duration = 150, volume = 0.3) {
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  oscillator.frequency.value = frequency;
+  oscillator.type = 'sine';
+  gainNode.gain.value = volume;
+  
+  oscillator.start();
+  setTimeout(() => {
+    oscillator.stop();
+    audioCtx.close();
+  }, duration);
 }
 
 function textToVector(text, length) {
@@ -797,9 +843,13 @@ async function runTraining() {
   let userInput = document.getElementById('inputText').value;
   userInput = userInput.padEnd(9, ' ').substring(0, 9);
   
+  // Get target output (pad or trim to 11 chars)
+  let targetOutput = document.getElementById('targetText').value;
+  targetOutput = targetOutput.padEnd(11, ' ').substring(0, 11);
+  
   // Prepare data
   const inputVec = textToVector(userInput, 9);
-  const targetVec = textToVector(OUTPUT_TEXT, 11);
+  const targetVec = textToVector(targetOutput, 11);
   
   inputTensor = tf.tensor2d([inputVec]);
   targetTensor = tf.tensor2d([targetVec]);
@@ -809,7 +859,7 @@ async function runTraining() {
   activateLayer('row-input');
   await sleep(400);
   
-  addLog(`Target: "${OUTPUT_TEXT}"`, 'init');
+  addLog(`Target: "${targetOutput}"`, 'init');
   addLog('', '');
   addLog('Starting training...', 'epoch');
   await sleep(300);
@@ -873,9 +923,13 @@ async function runTraining() {
   
   addLog(`Decoded output: "${decodedText}"`, 'output-msg');
   
+  // Play completion sound
+  beep(880, 150, 0.3);
+  setTimeout(() => beep(1100, 200, 0.3), 180);
+  
   // Show result
   await sleep(500);
-  outputText.textContent = OUTPUT_TEXT;
+  outputText.textContent = targetOutput;
   outputSection.classList.add('show');
   
   // Cleanup tensors
@@ -941,7 +995,7 @@ downloadBtn.addEventListener('click', async () => {
     architecture: "9 → 7 → 3 → 7 → 11",
     activation: "tanh",
     input_text: document.getElementById('inputText').value,
-    output_text: OUTPUT_TEXT,
+    output_text: document.getElementById('targetText').value,
     weights: weights,
     exported_at: new Date().toISOString()
   };
